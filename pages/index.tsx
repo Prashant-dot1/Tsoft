@@ -3,8 +3,12 @@ import { Inter } from 'next/font/google';
 import { BsTwitter , BsBell, BsEnvelope, BsBookmark } from "react-icons/bs";
 import { BiHomeCircle ,BiHash, BiUser ,BiMoney } from "react-icons/bi";
 import { SlOptions } from "react-icons/sl";
-import React from "react"
+import React, { useCallback } from "react"
 import FeedCard from "@/components/FeedCard";
+import { CredentialResponse, GoogleLogin } from '@react-oauth/google';
+import toast from 'react-hot-toast/headless';
+import { gqlClient } from '@/clients/api';
+import { verifyUserGoogleTokenQuery } from '@/graphql/query/user';
 
 interface TwitterSidebarButton {
   title : string
@@ -48,6 +52,21 @@ const SidebarMenuItems : TwitterSidebarButton[] = [
 
 
 export default function Home() {
+
+  const handleLoginWithGoogle = useCallback(async (cred : CredentialResponse) => {
+    const googleToken = cred.credential;
+    if(!googleToken) toast.error(`Google token not found`);
+
+    const {verifyGoogleToken} = await gqlClient.request(verifyUserGoogleTokenQuery , { token : googleToken});
+
+    toast.success('Verified');
+    console.log(verifyGoogleToken);
+
+    if(verifyGoogleToken) {
+      window.localStorage.setItem('__tsoftToken',verifyGoogleToken);
+    }
+  },[]);
+
   return (
     <div>
     <div className="grid grid-cols-12 h-screen w-screen pl-56">
@@ -78,7 +97,14 @@ export default function Home() {
         <FeedCard></FeedCard>
         <FeedCard></FeedCard>
       </div>
-      <div className='col-span-4'></div>
+      <div className='col-span-4'>
+        <div className='border p-5 bg-slate-700 rounded-lg'>
+          <h1 className='my-2 text-xl'>New To Tsoft ?</h1>
+          <GoogleLogin
+              onSuccess={handleLoginWithGoogle}
+            />
+        </div>
+      </div>
     </div>
     </div>
       )
