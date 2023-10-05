@@ -9,6 +9,8 @@ import { CredentialResponse, GoogleLogin } from '@react-oauth/google';
 import toast from 'react-hot-toast/headless';
 import { gqlClient } from '@/clients/api';
 import { verifyUserGoogleTokenQuery } from '@/graphql/query/user';
+import { useCurrentUser } from '@/hooks/user';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface TwitterSidebarButton {
   title : string
@@ -53,6 +55,10 @@ const SidebarMenuItems : TwitterSidebarButton[] = [
 
 export default function Home() {
 
+  const {user} = useCurrentUser();
+  const queryClient = useQueryClient();
+  console.log(user);
+
   const handleLoginWithGoogle = useCallback(async (cred : CredentialResponse) => {
     const googleToken = cred.credential;
     if(!googleToken) toast.error(`Google token not found`);
@@ -64,13 +70,14 @@ export default function Home() {
 
     if(verifyGoogleToken) {
       window.localStorage.setItem('__tsoftToken',verifyGoogleToken);
+      await queryClient.invalidateQueries(["current-user"]);
     }
-  },[]);
+  },[queryClient]);
 
   return (
     <div>
     <div className="grid grid-cols-12 h-screen w-screen pl-56">
-      <div className='col-span-3 pt-1 ml-12'>
+      <div className='col-span-3 pt-1 ml-12 relative'>
         <div className='text-2xl h-fit w-fit rounded-full hover:bg-gray-900  p-3 cursor-pointer transition-all pl-4'>
           <BsTwitter ></BsTwitter>
         </div>
@@ -88,6 +95,16 @@ export default function Home() {
           <button className='bg-[#1d9bf0] px-4 py-3 w-full rounded-full mt-4 text-lg font-semibold'>Tweet</button>
           </div>
         </div>
+
+        {user && (
+          <div className='absolute bottom-5 flex gap-2 items-center bg-slate-800 px-3 py-2 rounded-full'>
+          {user && user.profileImageURL && (
+            <Image className="rounded-full" src={user?.profileImageURL} alt="user-image" height={50} width={50}/>
+          )}
+          <div>
+            <h3 className='text-xl'>{user.firstName} {user.lastName}</h3>
+          </div>
+        </div>)}
       </div>
 
       <div className='col-span-5 border-r-[0.2px] border-l-[0.2px] border border-gray-600'>
@@ -98,12 +115,12 @@ export default function Home() {
         <FeedCard></FeedCard>
       </div>
       <div className='col-span-4'>
-        <div className='border p-5 bg-slate-700 rounded-lg'>
+        {!user && (<div className='border p-5 bg-slate-700 rounded-lg'>
           <h1 className='my-2 text-xl'>New To Tsoft ?</h1>
           <GoogleLogin
               onSuccess={handleLoginWithGoogle}
             />
-        </div>
+        </div>)}
       </div>
     </div>
     </div>
